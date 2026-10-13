@@ -12,7 +12,7 @@ export const auth = betterAuth({
     database: mongodbAdapter(db),
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
-    trustedOrigins: ["http://localhost:3000"],
+    trustedOrigins: ["http://localhost:3000", "https://crowdfunding-platform-client-flame.vercel.app"],
     advanced: {
         defaultCookieAttributes: {
             sameSite: "lax",
