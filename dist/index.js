@@ -17,9 +17,22 @@ const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+app.set("trust proxy", 1);
 const port = process.env.PORT || 5000;
 app.use((0, cors_1.default)({
-    origin: "http://localhost:3000",
+    origin: (origin, callback) => {
+        const allowedOrigins = [
+            "http://localhost:3000",
+            "https://crowdfunding-platform-client-flame.vercel.app",
+            process.env.CLIENT_URL,
+        ];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     credentials: true,
 }));
 // Better Auth handler MUST be mounted before express.json()

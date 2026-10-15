@@ -11,17 +11,31 @@ const mongodb_1 = require("better-auth/adapters/mongodb");
 const mongodb_2 = require("mongodb");
 const client = new mongodb_2.MongoClient(process.env.MONGODB_URI);
 const db = client.db();
+const isProduction = process.env.NODE_ENV === "production";
 exports.auth = (0, better_auth_1.betterAuth)({
     database: (0, mongodb_1.mongodbAdapter)(db),
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
-    trustedOrigins: ["http://localhost:3000"],
-    advanced: {
-        defaultCookieAttributes: {
-            sameSite: "lax",
-            secure: false
+    trustedOrigins: [
+        "http://localhost:3000",
+        "https://crowdfunding-platform-client-flame.vercel.app",
+        (process.env.CLIENT_URL || "").replace(/\/$/, ""),
+    ].filter(Boolean),
+    advanced: isProduction
+        ? {
+            useSecureCookies: true,
+            defaultCookieAttributes: {
+                sameSite: "none",
+                secure: true,
+                httpOnly: true,
+            },
         }
-    },
+        : {
+            defaultCookieAttributes: {
+                sameSite: "lax",
+                secure: false,
+            },
+        },
     emailAndPassword: {
         enabled: true,
     },

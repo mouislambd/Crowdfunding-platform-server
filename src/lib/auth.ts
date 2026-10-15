@@ -8,17 +8,32 @@ import { MongoClient } from "mongodb";
 const client = new MongoClient(process.env.MONGODB_URI as string);
 const db = client.db();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const auth = betterAuth({
     database: mongodbAdapter(db),
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
-    trustedOrigins: ["http://localhost:3000", "https://crowdfunding-platform-client-flame.vercel.app"],
-    advanced: {
-        defaultCookieAttributes: {
-            sameSite: "lax",
-            secure: false
-        }
-    },
+    trustedOrigins: [
+        "http://localhost:3000",
+        "https://crowdfunding-platform-client-flame.vercel.app",
+        (process.env.CLIENT_URL || "").replace(/\/$/, ""),
+    ].filter(Boolean) as string[],
+    advanced: isProduction
+        ? {
+              useSecureCookies: true,
+              defaultCookieAttributes: {
+                  sameSite: "none",
+                  secure: true,
+                  httpOnly: true,
+              },
+          }
+        : {
+              defaultCookieAttributes: {
+                  sameSite: "lax",
+                  secure: false,
+              },
+          },
     emailAndPassword: {
         enabled: true,
     },
