@@ -49,24 +49,29 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
                 defaultValue: "supporter",
+                input: true,
             },
             credits: {
                 type: "number",
                 required: false,
                 defaultValue: 0,
+                input: false,
             },
         },
     },
     databaseHooks: {
         user: {
             create: {
-                before: async (data: any) => {
-                    const role = data.role === "builder" ? "builder" : "supporter";
+                before: async (user: any) => {
+                    const role = user.role === "builder" ? "builder" : "supporter";
                     const credits = role === "supporter" ? 50 : 20;
+                    console.log("signup hook", user.email, role, credits);
                     return {
-                        ...data,
-                        role,
-                        credits,
+                        data: {
+                            ...user,
+                            role,
+                            credits,
+                        },
                     };
                 },
             },
