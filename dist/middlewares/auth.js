@@ -16,17 +16,24 @@ const requireAuth = async (req, res, next) => {
         if (!session) {
             return res.status(401).json({ message: "Unauthorized: Please login" });
         }
-        const dbUser = await db.collection("user").findOne({ email: session.user.email });
-        if (!dbUser) {
-            return res.status(401).json({ message: "Unauthorized: User not found" });
+        let role = session.user.role;
+        try {
+            const dbUser = await db.collection("user").findOne({ email: session.user.email });
+            if (dbUser && dbUser.role) {
+                role = dbUser.role;
+            }
+        }
+        catch (err) {
+            console.error("role lookup failed", err);
         }
         req.user = {
             ...session.user,
-            role: norm(dbUser.role),
+            role: norm(role),
         };
         next();
     }
     catch (error) {
+        console.error("requireAuth error", error);
         return res.status(401).json({ message: "Unauthorized" });
     }
 };
@@ -38,6 +45,7 @@ const requireRole = (...roles) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
         if (!roles.map(norm).includes(norm(req.user.role))) {
+            console.warn(`Forbidden: Insufficient permissions for user ${req.user.email}, role: ${req.user.role}`);
             return res
                 .status(403)
                 .json({ message: "Forbidden: Insufficient permissions" });
