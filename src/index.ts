@@ -10,6 +10,7 @@ import withdrawalRoutes from "./routes/withdrawal.routes";
 import notificationRoutes from "./routes/notification.routes";
 import paymentRoutes from "./routes/payment.routes";
 import userRoutes from "./routes/user.routes";
+import reportRoutes from "./routes/report.routes";
 
 dotenv.config();
 
@@ -50,6 +51,7 @@ app.use("/api/withdrawals", withdrawalRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/reports", reportRoutes);
 
 async function connectDB() {
     try {

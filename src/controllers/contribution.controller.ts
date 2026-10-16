@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import { Contribution } from "../models/Contribution";
 import { Campaign } from "../models/Campaign";
 import { Notification } from "../models/Notification";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI as string);
+const db = client.db();
 
 // Create a new contribution (Supporter)
 export const createContribution = async (req: Request, res: Response) => {
@@ -12,6 +16,25 @@ export const createContribution = async (req: Request, res: Response) => {
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
+
+        if (campaign.status !== "approved") {
+            return res.status(400).json({ message: "Campaign not approved" });
+        }
+
+        if (new Date() > new Date(campaign.deadline)) {
+            return res.status(400).json({ message: "Campaign deadline passed" });
+        }
+
+        if (contribution_amount < campaign.minimum_contribution) {
+            return res.status(400).json({ message: "Contribution below minimum" });
+        }
+
+        const user = await db.collection("user").findOne({ email: req.user.email });
+        if (!user || (user.credits || 0) < contribution_amount) {
+            return res.status(400).json({ message: "Insufficient credits" });
+        }
+
+        await db.collection("user").updateOne({ email: req.user.email }, { $inc: { credits: -contribution_amount } });
 
         const contribution = await Contribution.create({
             campaign_id,
@@ -130,7 +153,7 @@ export const approveContribution = async (req: Request, res: Response) => {
     }
 };
 
-// Reject contribution (Creator) - refund credits handled via user update
+// Reject contribution (Creator) - refund credits
 export const rejectContribution = async (req: Request, res: Response) => {
     try {
         const contribution = await Contribution.findOne({
@@ -144,6 +167,8 @@ export const rejectContribution = async (req: Request, res: Response) => {
 
         contribution.status = "rejected";
         await contribution.save();
+
+        await db.collection("user").updateOne({ email: contribution.supporter_email }, { $inc: { credits: contribution.contribution_amount } });
 
         await Notification.create({
             message: `Your contribution of ${contribution.contribution_amount} credits to ${contribution.campaign_title} was rejected by ${req.user.name}`,

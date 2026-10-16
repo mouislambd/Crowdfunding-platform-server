@@ -57,4 +57,19 @@ export const auth = betterAuth({
             },
         },
     },
+    databaseHooks: {
+        user: {
+            create: {
+                before: async (data: any) => {
+                    const role = data.role === "builder" ? "builder" : "supporter";
+                    const credits = role === "supporter" ? 50 : 20;
+                    return {
+                        ...data,
+                        role,
+                        credits,
+                    };
+                },
+            },
+        },
+    },
 });

@@ -2,6 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminDeleteCampaign = exports.getAllCampaigns = exports.rejectCampaign = exports.approveCampaign = exports.getPendingCampaigns = exports.deleteCampaign = exports.updateCampaign = exports.getMyCampaigns = exports.getCampaignById = exports.getTopFundedCampaigns = exports.getApprovedCampaigns = exports.createCampaign = void 0;
 const Campaign_1 = require("../models/Campaign");
+const Contribution_1 = require("../models/Contribution");
+const Notification_1 = require("../models/Notification");
+const mongodb_1 = require("mongodb");
+const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const db = client.db();
 // Create a new campaign (Creator)
 const createCampaign = async (req, res) => {
     try {
@@ -91,14 +96,19 @@ exports.updateCampaign = updateCampaign;
 // Delete campaign (Creator)
 const deleteCampaign = async (req, res) => {
     try {
-        const campaign = await Campaign_1.Campaign.findOneAndDelete({
+        const campaign = await Campaign_1.Campaign.findOne({
             _id: req.params.id,
             creator_email: req.user.email,
         });
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
-        res.status(200).json({ message: "Campaign deleted successfully" });
+        const approvedContributions = await Contribution_1.Contribution.find({ campaign_id: campaign._id, status: "approved" });
+        for (const cont of approvedContributions) {
+            await db.collection("user").updateOne({ email: cont.supporter_email }, { $inc: { credits: cont.contribution_amount } });
+        }
+        await Campaign_1.Campaign.findByIdAndDelete(campaign._id);
+        res.status(200).json({ message: "Campaign deleted successfully and contributions refunded" });
     }
     catch (error) {
         res.status(500).json({ message: error.message });
@@ -125,6 +135,12 @@ const approveCampaign = async (req, res) => {
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
+        await Notification_1.Notification.create({
+            message: `Your campaign "${campaign.campaign_title}" has been approved.`,
+            toEmail: campaign.creator_email,
+            actionRoute: "/dashboard/creator-home",
+            time: new Date(),
+        });
         res.status(200).json(campaign);
     }
     catch (error) {
@@ -139,6 +155,12 @@ const rejectCampaign = async (req, res) => {
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
+        await Notification_1.Notification.create({
+            message: `Your campaign "${campaign.campaign_title}" has been rejected.`,
+            toEmail: campaign.creator_email,
+            actionRoute: "/dashboard/creator-home",
+            time: new Date(),
+        });
         res.status(200).json(campaign);
     }
     catch (error) {
@@ -160,11 +182,16 @@ exports.getAllCampaigns = getAllCampaigns;
 // Delete campaign by Admin
 const adminDeleteCampaign = async (req, res) => {
     try {
-        const campaign = await Campaign_1.Campaign.findByIdAndDelete(req.params.id);
+        const campaign = await Campaign_1.Campaign.findById(req.params.id);
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
-        res.status(200).json({ message: "Campaign deleted successfully" });
+        const approvedContributions = await Contribution_1.Contribution.find({ campaign_id: campaign._id, status: "approved" });
+        for (const cont of approvedContributions) {
+            await db.collection("user").updateOne({ email: cont.supporter_email }, { $inc: { credits: cont.contribution_amount } });
+        }
+        await Campaign_1.Campaign.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Campaign deleted successfully and contributions refunded" });
     }
     catch (error) {
         res.status(500).json({ message: error.message });

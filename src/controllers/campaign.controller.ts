@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import { Campaign } from "../models/Campaign";
+import { Contribution } from "../models/Contribution";
+import { Notification } from "../models/Notification";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI as string);
+const db = client.db();
 
 // Create a new campaign (Creator)
 export const createCampaign = async (req: Request, res: Response) => {
@@ -95,7 +101,7 @@ export const updateCampaign = async (req: Request, res: Response) => {
 // Delete campaign (Creator)
 export const deleteCampaign = async (req: Request, res: Response) => {
     try {
-        const campaign = await Campaign.findOneAndDelete({
+        const campaign = await Campaign.findOne({
             _id: req.params.id,
             creator_email: req.user.email,
         });
@@ -104,7 +110,13 @@ export const deleteCampaign = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Campaign not found" });
         }
 
-        res.status(200).json({ message: "Campaign deleted successfully" });
+        const approvedContributions = await Contribution.find({ campaign_id: campaign._id, status: "approved" });
+        for (const cont of approvedContributions) {
+            await db.collection("user").updateOne({ email: cont.supporter_email }, { $inc: { credits: cont.contribution_amount } });
+        }
+
+        await Campaign.findByIdAndDelete(campaign._id);
+        res.status(200).json({ message: "Campaign deleted successfully and contributions refunded" });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -135,6 +147,13 @@ export const approveCampaign = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Campaign not found" });
         }
 
+        await Notification.create({
+            message: `Your campaign "${campaign.campaign_title}" has been approved.`,
+            toEmail: campaign.creator_email,
+            actionRoute: "/dashboard/creator-home",
+            time: new Date(),
+        });
+
         res.status(200).json(campaign);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
@@ -153,6 +172,13 @@ export const rejectCampaign = async (req: Request, res: Response) => {
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
+
+        await Notification.create({
+            message: `Your campaign "${campaign.campaign_title}" has been rejected.`,
+            toEmail: campaign.creator_email,
+            actionRoute: "/dashboard/creator-home",
+            time: new Date(),
+        });
 
         res.status(200).json(campaign);
     } catch (error: any) {
@@ -173,11 +199,18 @@ export const getAllCampaigns = async (req: Request, res: Response) => {
 // Delete campaign by Admin
 export const adminDeleteCampaign = async (req: Request, res: Response) => {
     try {
-        const campaign = await Campaign.findByIdAndDelete(req.params.id);
+        const campaign = await Campaign.findById(req.params.id);
         if (!campaign) {
             return res.status(404).json({ message: "Campaign not found" });
         }
-        res.status(200).json({ message: "Campaign deleted successfully" });
+
+        const approvedContributions = await Contribution.find({ campaign_id: campaign._id, status: "approved" });
+        for (const cont of approvedContributions) {
+            await db.collection("user").updateOne({ email: cont.supporter_email }, { $inc: { credits: cont.contribution_amount } });
+        }
+
+        await Campaign.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Campaign deleted successfully and contributions refunded" });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

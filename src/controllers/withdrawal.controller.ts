@@ -1,11 +1,45 @@
 import { Request, Response } from "express";
 import { Withdrawal } from "../models/Withdrawal";
+import { Campaign } from "../models/Campaign";
+import { Payment } from "../models/Payment";
+import { Notification } from "../models/Notification";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI as string);
+const db = client.db();
+
+// Withdrawal summary (Builder)
+export const getWithdrawalSummary = async (req: Request, res: Response) => {
+    try {
+        const campaigns = await Campaign.find({ creator_email: req.user.email });
+        const totalRaised = campaigns.reduce((sum, c) => sum + (c.amount_raised || 0), 0);
+        const withdrawals = await Withdrawal.find({ creator_email: req.user.email, status: "approved" });
+        const withdrawn = withdrawals.reduce((sum, w) => sum + (w.withdrawal_amount || 0), 0);
+        const available = totalRaised - withdrawn;
+
+        res.status(200).json({ totalRaised, withdrawn, available });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 // Create withdrawal request (Creator)
 export const createWithdrawal = async (req: Request, res: Response) => {
     try {
-        const { withdrawal_credit, withdrawal_amount, payment_system, account_number } =
-            req.body;
+        const { withdrawal_credit, payment_system, account_number } = req.body;
+        
+        // Validate
+        const campaigns = await Campaign.find({ creator_email: req.user.email });
+        const totalRaised = campaigns.reduce((sum, c) => sum + (c.amount_raised || 0), 0);
+        const withdrawals = await Withdrawal.find({ creator_email: req.user.email, status: "approved" });
+        const withdrawn = withdrawals.reduce((sum, w) => sum + (w.withdrawal_amount || 0), 0);
+        const available = totalRaised - withdrawn;
+
+        if (withdrawal_credit > available || withdrawal_credit < 200) {
+            return res.status(400).json({ message: "Invalid credit amount" });
+        }
+        
+        const withdrawal_amount = withdrawal_credit / 20;
 
         const withdrawal = await Withdrawal.create({
             creator_email: req.user.email,
@@ -23,6 +57,9 @@ export const createWithdrawal = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// ... (rest of the file)
+
 
 // Get Creator's payment history (all their withdrawals)
 export const getMyWithdrawals = async (req: Request, res: Response) => {
@@ -62,6 +99,22 @@ export const approveWithdrawal = async (req: Request, res: Response) => {
         if (!withdrawal) {
             return res.status(404).json({ message: "Withdrawal not found" });
         }
+
+        await Payment.create({
+            user_email: withdrawal.creator_email,
+            user_name: withdrawal.creator_name,
+            amount: withdrawal.withdrawal_amount,
+            credits: withdrawal.withdrawal_credit,
+            payment_type: "withdrawal",
+            status: "success",
+        });
+
+        await Notification.create({
+            message: `Your withdrawal of ${withdrawal.withdrawal_amount} has been approved.`,
+            toEmail: withdrawal.creator_email,
+            actionRoute: "/dashboard/creator-home",
+            time: new Date(),
+        });
 
         res.status(200).json(withdrawal);
     } catch (error: any) {

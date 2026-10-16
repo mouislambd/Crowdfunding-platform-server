@@ -15,6 +15,7 @@ const withdrawal_routes_1 = __importDefault(require("./routes/withdrawal.routes"
 const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
+const report_routes_1 = __importDefault(require("./routes/report.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
@@ -47,6 +48,7 @@ app.use("/api/withdrawals", withdrawal_routes_1.default);
 app.use("/api/notifications", notification_routes_1.default);
 app.use("/api/payments", payment_routes_1.default);
 app.use("/api/users", user_routes_1.default);
+app.use("/api/reports", report_routes_1.default);
 async function connectDB() {
     try {
         const uri = process.env.MONGODB_URI;

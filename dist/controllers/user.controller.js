@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAdminStats = exports.removeUser = exports.updateUserRole = exports.getAllUsers = void 0;
 const mongodb_1 = require("mongodb");
+const Payment_1 = require("../models/Payment");
 const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
 // Get all users (Admin - Manage Users)
 const getAllUsers = async (req, res) => {
@@ -85,10 +86,11 @@ const getAdminStats = async (req, res) => {
     try {
         const db = client.db();
         const users = await db.collection("user").find().toArray();
+        const totalPayments = await Payment_1.Payment.countDocuments();
         const totalSupporters = users.filter((u) => u.role === "supporter").length;
-        const totalCreators = users.filter((u) => u.role === "creator").length;
+        const totalBuilders = users.filter((u) => u.role === "builder").length;
         const totalCredits = users.reduce((sum, u) => sum + (u.credits || 0), 0);
-        res.status(200).json({ totalSupporters, totalCreators, totalCredits });
+        res.status(200).json({ totalSupporters, totalBuilders, totalCredits, totalPayments });
     }
     catch (error) {
         res.status(500).json({ message: error.message });

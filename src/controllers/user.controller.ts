@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { MongoClient } from "mongodb";
+import { Payment } from "../models/Payment";
 
 const client = new MongoClient(process.env.MONGODB_URI as string);
 
@@ -58,12 +59,13 @@ export const getAdminStats = async (req: Request, res: Response) => {
     try {
         const db = client.db();
         const users = await db.collection("user").find().toArray();
+        const totalPayments = await Payment.countDocuments();
 
         const totalSupporters = users.filter((u: any) => u.role === "supporter").length;
-        const totalCreators = users.filter((u: any) => u.role === "creator").length;
+        const totalBuilders = users.filter((u: any) => u.role === "builder").length;
         const totalCredits = users.reduce((sum: number, u: any) => sum + (u.credits || 0), 0);
 
-        res.status(200).json({ totalSupporters, totalCreators, totalCredits });
+        res.status(200).json({ totalSupporters, totalBuilders, totalCredits, totalPayments });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
