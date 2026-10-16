@@ -63,7 +63,8 @@ export const auth = betterAuth({
         user: {
             create: {
                 before: async (user: any) => {
-                    const role = user.role === "builder" ? "builder" : "supporter";
+                    const normalizedRole = (user.role || "supporter").trim().toLowerCase();
+                    const role = normalizedRole === "builder" ? "builder" : "supporter";
                     const credits = role === "supporter" ? 50 : 20;
                     console.log("signup hook", user.email, role, credits);
                     return {

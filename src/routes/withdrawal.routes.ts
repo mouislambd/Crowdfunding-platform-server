@@ -10,11 +10,11 @@ import {
 const router = express.Router();
 
 // Creator routes
-router.post("/", requireAuth, requireRole("creator"), createWithdrawal);
+router.post("/", requireAuth, requireRole("builder"), createWithdrawal);
 router.get(
     "/my-withdrawals",
     requireAuth,
-    requireRole("creator"),
+    requireRole("builder"),
     getMyWithdrawals
 );
 

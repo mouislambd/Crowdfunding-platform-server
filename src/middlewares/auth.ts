@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI as string);
+const db = client.db();
+
+const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
 
 // Extend Express Request type to include user
 declare global {
@@ -26,7 +32,15 @@ export const requireAuth = async (
             return res.status(401).json({ message: "Unauthorized: Please login" });
         }
 
-        req.user = session.user;
+        const dbUser = await db.collection("user").findOne({ email: session.user.email });
+        if (!dbUser) {
+            return res.status(401).json({ message: "Unauthorized: User not found" });
+        }
+
+        req.user = {
+            ...session.user,
+            role: norm(dbUser.role),
+        };
         next();
     } catch (error) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -40,7 +54,7 @@ export const requireRole = (...roles: string[]) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
 
-        if (!roles.map(r => r.toLowerCase()).includes(req.user.role?.toLowerCase())) {
+        if (!roles.map(norm).includes(norm(req.user.role))) {
             return res
                 .status(403)
                 .json({ message: "Forbidden: Insufficient permissions" });
