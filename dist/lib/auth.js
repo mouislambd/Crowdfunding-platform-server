@@ -28,6 +28,7 @@ exports.auth = (0, better_auth_1.betterAuth)({
         accountLinking: {
             enabled: true,
             trustedProviders: ["google"],
+            allowDifferentEmails: false,
         },
     },
     advanced: isProduction
@@ -54,10 +55,6 @@ exports.auth = (0, better_auth_1.betterAuth)({
             clientSecret: env("GOOGLE_CLIENT_SECRET"),
             redirectURI: `${BETTER_AUTH_URL}/api/auth/callback/google`,
             prompt: "select_account",
-            mapProfileToUser: (profile) => ({
-                role: "supporter",
-                credits: 50,
-            }),
         },
     },
     user: {
