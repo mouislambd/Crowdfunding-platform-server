@@ -5,24 +5,31 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
 
-const client = new MongoClient(process.env.MONGODB_URI as string);
+const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
+
+const client = new MongoClient(env("MONGODB_URI"));
 const db = client.db();
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const BETTER_AUTH_URL = env("BETTER_AUTH_URL");
 const CLIENT_URL = env("CLIENT_URL");
 
 export const auth = betterAuth({
     database: mongodbAdapter(db),
-    secret: (process.env.BETTER_AUTH_SECRET ?? "").trim(),
+    secret: env("BETTER_AUTH_SECRET"),
     baseURL: BETTER_AUTH_URL,
     trustedOrigins: [
         "http://localhost:3000",
         "https://crowdfunding-platform-client-flame.vercel.app",
         CLIENT_URL,
     ].filter(Boolean) as string[],
+    account: {
+        accountLinking: {
+            enabled: true,
+            trustedProviders: ["google"],
+        },
+    },
     advanced: isProduction
         ? {
               useSecureCookies: true,
@@ -43,9 +50,14 @@ export const auth = betterAuth({
     },
     socialProviders: {
         google: {
-            clientId: (process.env.GOOGLE_CLIENT_ID ?? "").trim(),
-            clientSecret: (process.env.GOOGLE_CLIENT_SECRET ?? "").trim(),
+            clientId: env("GOOGLE_CLIENT_ID"),
+            clientSecret: env("GOOGLE_CLIENT_SECRET"),
             redirectURI: `${BETTER_AUTH_URL}/api/auth/callback/google`,
+            prompt: "select_account",
+            mapProfileToUser: (profile) => ({
+                role: "supporter",
+                credits: 50,
+            }),
         },
     },
     user: {
@@ -68,17 +80,28 @@ export const auth = betterAuth({
         user: {
             create: {
                 before: async (user: any) => {
-                    const normalizedRole = (user.role || "supporter").trim().toLowerCase();
-                    const role = normalizedRole === "builder" ? "builder" : "supporter";
-                    const credits = role === "supporter" ? 50 : 20;
-                    console.log("signup hook", user.email, role, credits);
-                    return {
-                        data: {
-                            ...user,
-                            role,
-                            credits,
-                        },
-                    };
+                    try {
+                        const normalizedRole = typeof user?.role === "string" ? user.role.trim().toLowerCase() : "supporter";
+                        const role = normalizedRole === "builder" ? "builder" : "supporter";
+                        const credits = role === "supporter" ? 50 : 20;
+                        console.log("signup hook", user?.email, role, credits);
+                        return {
+                            data: {
+                                ...user,
+                                role,
+                                credits,
+                            },
+                        };
+                    } catch (error) {
+                        console.error("Error in databaseHooks.user.create.before:", error);
+                        return {
+                            data: {
+                                ...user,
+                                role: "supporter",
+                                credits: 50,
+                            },
+                        };
+                    }
                 },
             },
         },

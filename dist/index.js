@@ -51,6 +51,10 @@ app.use("/api/notifications", notification_routes_1.default);
 app.use("/api/payments", payment_routes_1.default);
 app.use("/api/users", user_routes_1.default);
 app.use("/api/reports", report_routes_1.default);
+app.use((err, req, res, next) => {
+    console.error("Unhandled Express error:", err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
+});
 async function connectDB() {
     try {
         const uri = process.env.MONGODB_URI;
