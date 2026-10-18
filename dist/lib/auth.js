@@ -12,14 +12,17 @@ const mongodb_2 = require("mongodb");
 const client = new mongodb_2.MongoClient(process.env.MONGODB_URI);
 const db = client.db();
 const isProduction = process.env.NODE_ENV === "production";
+const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
+const BETTER_AUTH_URL = env("BETTER_AUTH_URL");
+const CLIENT_URL = env("CLIENT_URL");
 exports.auth = (0, better_auth_1.betterAuth)({
     database: (0, mongodb_1.mongodbAdapter)(db),
-    secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL,
+    secret: (process.env.BETTER_AUTH_SECRET ?? "").trim(),
+    baseURL: BETTER_AUTH_URL,
     trustedOrigins: [
         "http://localhost:3000",
         "https://crowdfunding-platform-client-flame.vercel.app",
-        (process.env.CLIENT_URL || "").replace(/\/$/, ""),
+        CLIENT_URL,
     ].filter(Boolean),
     advanced: isProduction
         ? {
@@ -41,8 +44,9 @@ exports.auth = (0, better_auth_1.betterAuth)({
     },
     socialProviders: {
         google: {
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            clientId: (process.env.GOOGLE_CLIENT_ID ?? "").trim(),
+            clientSecret: (process.env.GOOGLE_CLIENT_SECRET ?? "").trim(),
+            redirectURI: `${BETTER_AUTH_URL}/api/auth/callback/google`,
         },
     },
     user: {

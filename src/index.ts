@@ -14,6 +14,9 @@ import reportRoutes from "./routes/report.routes";
 
 dotenv.config();
 
+const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
+const CLIENT_URL = env("CLIENT_URL");
+
 const app = express();
 app.set("trust proxy", 1);
 const port = process.env.PORT || 5000;
@@ -24,7 +27,7 @@ app.use(
             const allowedOrigins = [
                 "http://localhost:3000",
                 "https://crowdfunding-platform-client-flame.vercel.app",
-                process.env.CLIENT_URL,
+                CLIENT_URL,
             ];
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
@@ -64,6 +67,8 @@ async function connectDB() {
 }
 
 connectDB();
+
+console.log("BETTER_AUTH_URL:", env("BETTER_AUTH_URL"), "CLIENT_URL:", CLIENT_URL);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

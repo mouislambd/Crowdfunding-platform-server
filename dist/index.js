@@ -17,6 +17,8 @@ const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const report_routes_1 = __importDefault(require("./routes/report.routes"));
 dotenv_1.default.config();
+const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
+const CLIENT_URL = env("CLIENT_URL");
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
 const port = process.env.PORT || 5000;
@@ -25,7 +27,7 @@ app.use((0, cors_1.default)({
         const allowedOrigins = [
             "http://localhost:3000",
             "https://crowdfunding-platform-client-flame.vercel.app",
-            process.env.CLIENT_URL,
+            CLIENT_URL,
         ];
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
@@ -60,6 +62,7 @@ async function connectDB() {
     }
 }
 connectDB();
+console.log("BETTER_AUTH_URL:", env("BETTER_AUTH_URL"), "CLIENT_URL:", CLIENT_URL);
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

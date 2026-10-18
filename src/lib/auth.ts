@@ -10,14 +10,18 @@ const db = client.db();
 
 const isProduction = process.env.NODE_ENV === "production";
 
+const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
+const BETTER_AUTH_URL = env("BETTER_AUTH_URL");
+const CLIENT_URL = env("CLIENT_URL");
+
 export const auth = betterAuth({
     database: mongodbAdapter(db),
-    secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL,
+    secret: (process.env.BETTER_AUTH_SECRET ?? "").trim(),
+    baseURL: BETTER_AUTH_URL,
     trustedOrigins: [
         "http://localhost:3000",
         "https://crowdfunding-platform-client-flame.vercel.app",
-        (process.env.CLIENT_URL || "").replace(/\/$/, ""),
+        CLIENT_URL,
     ].filter(Boolean) as string[],
     advanced: isProduction
         ? {
@@ -39,8 +43,9 @@ export const auth = betterAuth({
     },
     socialProviders: {
         google: {
-            clientId: process.env.GOOGLE_CLIENT_ID as string,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+            clientId: (process.env.GOOGLE_CLIENT_ID ?? "").trim(),
+            clientSecret: (process.env.GOOGLE_CLIENT_SECRET ?? "").trim(),
+            redirectURI: `${BETTER_AUTH_URL}/api/auth/callback/google`,
         },
     },
     user: {
