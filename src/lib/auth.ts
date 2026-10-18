@@ -31,21 +31,26 @@ export const auth = betterAuth({
             allowDifferentEmails: false,
         },
     },
-    advanced: isProduction
-        ? {
-              useSecureCookies: true,
-              defaultCookieAttributes: {
-                  sameSite: "none",
-                  secure: true,
-                  httpOnly: true,
-              },
-          }
-        : {
-              defaultCookieAttributes: {
-                  sameSite: "lax",
-                  secure: false,
-              },
-          },
+    advanced: {
+        ...(isProduction
+            ? {
+                  useSecureCookies: true,
+                  defaultCookieAttributes: {
+                      sameSite: "none",
+                      secure: true,
+                      httpOnly: true,
+                  },
+              }
+            : {
+                  defaultCookieAttributes: {
+                      sameSite: "lax",
+                      secure: false,
+                  },
+              }),
+        ipAddress: {
+            ipAddressHeaders: ["x-forwarded-for"],
+        },
+    },
     emailAndPassword: {
         enabled: true,
     },
@@ -55,6 +60,10 @@ export const auth = betterAuth({
             clientSecret: env("GOOGLE_CLIENT_SECRET"),
             redirectURI: `${BETTER_AUTH_URL}/api/auth/callback/google`,
             prompt: "select_account",
+            mapProfileToUser: (profile) => ({
+                role: "supporter",
+                credits: 50,
+            }),
         },
     },
     user: {
@@ -104,3 +113,5 @@ export const auth = betterAuth({
         },
     },
 });
+
+console.log("account linking:", JSON.stringify(auth.options.account));
