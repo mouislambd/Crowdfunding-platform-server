@@ -8,5 +8,5 @@ const payment_controller_1 = require("../controllers/payment.controller");
 const auth_1 = require("../middlewares/auth");
 const router = express_1.default.Router();
 router.post("/", auth_1.requireAuth, (0, auth_1.requireRole)("supporter"), payment_controller_1.createPayment);
-router.get("/my-payments", auth_1.requireAuth, payment_controller_1.getMyPayments);
+router.get("/my-payments", auth_1.requireAuth, (0, auth_1.requireRole)("supporter", "builder"), payment_controller_1.getMyPayments);
 exports.default = router;

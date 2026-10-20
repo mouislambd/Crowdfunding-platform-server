@@ -7,9 +7,10 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middlewares/auth");
 const withdrawal_controller_1 = require("../controllers/withdrawal.controller");
 const router = express_1.default.Router();
-// Creator routes
+// Builder routes
 router.post("/", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), withdrawal_controller_1.createWithdrawal);
 router.get("/my-withdrawals", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), withdrawal_controller_1.getMyWithdrawals);
+router.get("/summary", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), withdrawal_controller_1.getWithdrawalSummary);
 // Admin routes
 router.get("/pending", auth_1.requireAuth, (0, auth_1.requireRole)("admin"), withdrawal_controller_1.getPendingWithdrawals);
 router.patch("/approve/:id", auth_1.requireAuth, (0, auth_1.requireRole)("admin"), withdrawal_controller_1.approveWithdrawal);

@@ -31,23 +31,29 @@ router.get(
     getApprovedContributions
 );
 
-// Creator routes
+// Builder routes
 router.get(
     "/creator/pending",
     requireAuth,
-    requireRole("creator"),
+    requireRole("builder"),
+    getPendingContributionsForCreator
+);
+router.get(
+    "/builder/pending",
+    requireAuth,
+    requireRole("builder"),
     getPendingContributionsForCreator
 );
 router.patch(
     "/approve/:id",
     requireAuth,
-    requireRole("creator"),
+    requireRole("builder"),
     approveContribution
 );
 router.patch(
     "/reject/:id",
     requireAuth,
-    requireRole("creator"),
+    requireRole("builder"),
     rejectContribution
 );
 

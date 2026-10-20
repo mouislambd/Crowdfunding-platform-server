@@ -5,17 +5,24 @@ import {
     getMyWithdrawals,
     getPendingWithdrawals,
     approveWithdrawal,
+    getWithdrawalSummary,
 } from "../controllers/withdrawal.controller";
 
 const router = express.Router();
 
-// Creator routes
+// Builder routes
 router.post("/", requireAuth, requireRole("builder"), createWithdrawal);
 router.get(
     "/my-withdrawals",
     requireAuth,
     requireRole("builder"),
     getMyWithdrawals
+);
+router.get(
+    "/summary",
+    requireAuth,
+    requireRole("builder"),
+    getWithdrawalSummary
 );
 
 // Admin routes

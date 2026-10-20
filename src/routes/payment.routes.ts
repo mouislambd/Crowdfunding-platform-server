@@ -5,6 +5,6 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 const router = express.Router();
 
 router.post("/", requireAuth, requireRole("supporter"), createPayment);
-router.get("/my-payments", requireAuth, getMyPayments);
+router.get("/my-payments", requireAuth, requireRole("supporter", "builder"), getMyPayments);
 
 export default router;
