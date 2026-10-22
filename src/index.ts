@@ -11,6 +11,7 @@ import notificationRoutes from "./routes/notification.routes";
 import paymentRoutes from "./routes/payment.routes";
 import userRoutes from "./routes/user.routes";
 import reportRoutes from "./routes/report.routes";
+import publicRoutes from "./routes/public.routes";
 
 dotenv.config();
 
@@ -55,6 +56,9 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api", publicRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api/subscribers", publicRoutes);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error("Unhandled Express error:", err);
