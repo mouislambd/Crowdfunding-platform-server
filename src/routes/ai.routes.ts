@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
-import { assistantController, draftCampaignController } from "../controllers/ai.controller";
+import { assistantController, draftCampaignController, healthController } from "../controllers/ai.controller";
 import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router = express.Router();
@@ -21,7 +21,7 @@ function rateLimit(limit: number, windowMs: number = 60000) {
         timestamps = timestamps.filter(t => now - t < windowMs);
 
         if (timestamps.length >= limit) {
-            return res.status(429).json({ message: "Too many requests, please try again later." });
+            return res.status(429).json({ message: "Too many requests, please try again later.", code: "RATE_LIMIT", detail: "Too many requests" });
         }
 
         timestamps.push(now);
@@ -30,6 +30,7 @@ function rateLimit(limit: number, windowMs: number = 60000) {
     };
 }
 
+router.get("/health", healthController);
 router.post("/assistant", rateLimit(15, 60000), assistantController);
 router.post("/draft-campaign", requireAuth, requireRole("builder"), rateLimit(5, 60000), draftCampaignController);
 

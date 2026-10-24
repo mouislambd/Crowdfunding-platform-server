@@ -59,7 +59,7 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                     console.error(`Groq status ${status}: model ${model} failed`);
                     continue;
                 } else {
-                    throw new Error(`Groq API error (${status}): ${text}`);
+                    throw new Error(`Groq API error (${status}): ${text.slice(0, 100)}`);
                 }
             }
 

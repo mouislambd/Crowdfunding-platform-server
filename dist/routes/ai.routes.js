@@ -20,13 +20,14 @@ function rateLimit(limit, windowMs = 60000) {
         let timestamps = rateLimits.get(key) || [];
         timestamps = timestamps.filter(t => now - t < windowMs);
         if (timestamps.length >= limit) {
-            return res.status(429).json({ message: "Too many requests, please try again later." });
+            return res.status(429).json({ message: "Too many requests, please try again later.", code: "RATE_LIMIT", detail: "Too many requests" });
         }
         timestamps.push(now);
         rateLimits.set(key, timestamps);
         next();
     };
 }
+router.get("/health", ai_controller_1.healthController);
 router.post("/assistant", rateLimit(15, 60000), ai_controller_1.assistantController);
 router.post("/draft-campaign", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), rateLimit(5, 60000), ai_controller_1.draftCampaignController);
 exports.default = router;

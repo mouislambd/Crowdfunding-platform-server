@@ -55,7 +55,7 @@ async function chatJson(messages) {
                     continue;
                 }
                 else {
-                    throw new Error(`Groq API error (${status}): ${text}`);
+                    throw new Error(`Groq API error (${status}): ${text.slice(0, 100)}`);
                 }
             }
             const data = await response.json();

@@ -46,6 +46,10 @@ app.use(express_1.default.json());
 app.get("/", (req, res) => {
     res.send("Crowdfunding Platform Server is running!");
 });
+app.get("/api/version", (req, res) => {
+    res.json({ version: "ai-v2", time: new Date().toISOString() });
+});
+app.use("/api/ai", ai_routes_1.default);
 app.use("/api/campaigns", campaign_routes_1.default);
 app.use("/api/contributions", contribution_routes_1.default);
 app.use("/api/withdrawals", withdrawal_routes_1.default);
@@ -53,7 +57,6 @@ app.use("/api/notifications", notification_routes_1.default);
 app.use("/api/payments", payment_routes_1.default);
 app.use("/api/users", user_routes_1.default);
 app.use("/api/reports", report_routes_1.default);
-app.use("/api/ai", ai_routes_1.default);
 app.use("/api", public_routes_1.default);
 app.use("/api/public", public_routes_1.default);
 app.use("/api/subscribers", public_routes_1.default);
@@ -72,7 +75,8 @@ async function connectDB() {
     }
 }
 connectDB();
-console.log("BETTER_AUTH_URL:", env("BETTER_AUTH_URL"), "CLIENT_URL:", CLIENT_URL);
+const groqKeyPresent = Boolean(process.env.GROQ_API_KEY?.trim());
+console.log(`Mounted route prefixes: /api/auth, /api/ai, /api/campaigns, /api/contributions, /api/withdrawals, /api/notifications, /api/payments, /api/users, /api/reports, /api/public, /api/subscribers, /api/version | GROQ_API_KEY present: ${groqKeyPresent}`);
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
