@@ -12,6 +12,7 @@ import paymentRoutes from "./routes/payment.routes";
 import userRoutes from "./routes/user.routes";
 import reportRoutes from "./routes/report.routes";
 import publicRoutes from "./routes/public.routes";
+import aiRoutes from "./routes/ai.routes";
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api", publicRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/subscribers", publicRoutes);
