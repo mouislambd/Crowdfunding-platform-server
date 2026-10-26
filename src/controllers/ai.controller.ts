@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Request, Response } from "express";
 import { chatJson } from "../lib/groq";
 import { auth } from "../lib/auth";

@@ -1,6 +1,6 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
@@ -13,8 +13,6 @@ import userRoutes from "./routes/user.routes";
 import reportRoutes from "./routes/report.routes";
 import publicRoutes from "./routes/public.routes";
 import aiRoutes from "./routes/ai.routes";
-
-dotenv.config();
 
 const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const CLIENT_URL = env("CLIENT_URL");
@@ -74,6 +72,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function connectDB() {
     try {
         const uri = process.env.MONGODB_URI as string;
+        if (!uri) {
+            throw new Error("MONGODB_URI is not set");
+        }
         await mongoose.connect(uri);
         console.log("MongoDB connected successfully");
     } catch (error) {

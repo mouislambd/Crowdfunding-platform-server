@@ -1,13 +1,16 @@
-import dotenv from "dotenv";
-dotenv.config();
-
+import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { MongoClient } from "mongodb";
 
 const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 
-const client = new MongoClient(env("MONGODB_URI"));
+const mongoUri = env("MONGODB_URI");
+if (!mongoUri) {
+    throw new Error("MONGODB_URI is not set");
+}
+
+const client = new MongoClient(mongoUri);
 const db = client.db();
 
 const isProduction = process.env.NODE_ENV === "production";

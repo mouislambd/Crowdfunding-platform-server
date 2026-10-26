@@ -1,9 +1,14 @@
+import "dotenv/config";
 import { Request, Response, NextFunction } from "express";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { MongoClient } from "mongodb";
 
-const client = new MongoClient(process.env.MONGODB_URI as string);
+const uri = process.env.MONGODB_URI as string;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new MongoClient(uri);
 const db = client.db();
 
 const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();

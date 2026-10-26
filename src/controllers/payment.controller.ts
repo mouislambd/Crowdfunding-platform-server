@@ -1,8 +1,13 @@
+import "dotenv/config";
 import { Request, Response } from "express";
 import { MongoClient } from "mongodb";
 import { Payment } from "../models/Payment";
 
-const client = new MongoClient(process.env.MONGODB_URI as string);
+const uri = process.env.MONGODB_URI as string;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new MongoClient(uri);
 
 export const createPayment = async (req: Request, res: Response) => {
     try {
