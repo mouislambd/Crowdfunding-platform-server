@@ -90,17 +90,9 @@ const healthController = async (req, res) => {
         catch {
             configured = false;
         }
-        const defaultModel = env("GROQ_MODEL") || "qwen/qwen3.8-27b";
-        const fallbackEnv = env("GROQ_FALLBACK_MODELS");
-        const fallbacks = fallbackEnv
-            ? fallbackEnv.split(",").map(m => m.trim()).filter(Boolean)
-            : [
-                "openai/gpt-oss-20b",
-                "openai/gpt-oss-120b",
-                "allam-2-7b",
-                "llama-3.3-70b-versatile",
-                "llama-3.1-8b-instant"
-            ];
+        const modelsToTry = (0, groq_1.getModelsToTry)();
+        const defaultModel = modelsToTry[0] || "qwen/qwen3.8-27b";
+        const fallbacks = modelsToTry.slice(1);
         const models = {
             default: defaultModel,
             fallbacks,

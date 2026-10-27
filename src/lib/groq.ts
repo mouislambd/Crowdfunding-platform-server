@@ -18,8 +18,14 @@ export function getGroqApiKey(): string {
     return trimmed;
 }
 
-export async function chatJson(messages: Array<{ role: string; content: string }>): Promise<any> {
-    const apiKey = getGroqApiKey();
+export function getModelsToTry(): string[] {
+    const modelsEnv = env("GROQ_MODELS");
+    if (modelsEnv) {
+        const parsed = modelsEnv.split(",").map(m => m.trim()).filter(Boolean);
+        if (parsed.length > 0) {
+            return Array.from(new Set(parsed));
+        }
+    }
 
     const defaultModel = env("GROQ_MODEL") || "qwen/qwen3.8-27b";
     const fallbackEnv = env("GROQ_FALLBACK_MODELS");
@@ -29,12 +35,14 @@ export async function chatJson(messages: Array<{ role: string; content: string }
             "openai/gpt-oss-20b",
             "openai/gpt-oss-120b",
             "allam-2-7b",
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant"
+            "canopylabs/orpheus-v1-english"
           ];
+    return Array.from(new Set([defaultModel, ...fallbacks]));
+}
 
-    const modelsToTry = [defaultModel, ...fallbacks];
-    const uniqueModels = Array.from(new Set(modelsToTry));
+export async function chatJson(messages: Array<{ role: string; content: string }>): Promise<any> {
+    const apiKey = getGroqApiKey();
+    const uniqueModels = getModelsToTry();
 
     let lastError: any = null;
 
@@ -74,7 +82,7 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                     // not json
                 }
 
-                console.error(`Groq error: model ${model} failed with HTTP status ${status}. Code: ${groqErrCode}, Message: ${groqErrMsg}`);
+                console.error(`Groq error: model ${model} failed with status ${status}`);
 
                 const err: any = new Error(`Groq API error (${status}): ${groqErrMsg}`);
                 err.status = status;
@@ -92,7 +100,9 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                     status === 429 ||
                     status >= 500 ||
                     lowerText.includes("decommissioned") ||
-                    lowerText.includes("model_not_found");
+                    lowerText.includes("model_not_found") ||
+                    lowerText.includes("does not exist") ||
+                    lowerText.includes("not have access");
 
                 if (isRetryable) {
                     lastError = err;
@@ -127,12 +137,14 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                 msg.includes("timeout") ||
                 msg.includes("decommissioned") ||
                 msg.includes("model_not_found") ||
+                msg.includes("does not exist") ||
+                msg.includes("not have access") ||
                 msg.includes("400") ||
                 msg.includes("404") ||
                 msg.includes("429") ||
                 msg.includes("5");
 
-            console.error(`Groq error: model ${model} failed`, err?.message || err);
+            console.error(`Groq error: model ${model} failed with status ${status || 500}`);
             if (!isRetryable) {
                 throw err;
             }
