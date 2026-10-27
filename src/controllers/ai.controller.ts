@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Request, Response } from "express";
-import { chatJson } from "../lib/groq";
+import { chatJson, getGroqApiKey } from "../lib/groq";
 import { auth } from "../lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { Campaign } from "../models/Campaign";
@@ -86,12 +86,25 @@ const creditRulesDesc = "Supporters get 50 credits and builders 20 at signup. 20
 
 export const healthController = async (req: Request, res: Response) => {
     try {
-        const configured = Boolean(env("GROQ_API_KEY"));
-        const defaultModel = env("GROQ_MODEL") || "llama-3.3-70b-versatile";
+        let configured = false;
+        try {
+            getGroqApiKey();
+            configured = true;
+        } catch {
+            configured = false;
+        }
+
+        const defaultModel = env("GROQ_MODEL") || "qwen/qwen3.8-27b";
         const fallbackEnv = env("GROQ_FALLBACK_MODELS");
         const fallbacks = fallbackEnv
             ? fallbackEnv.split(",").map(m => m.trim()).filter(Boolean)
-            : ["llama-3.1-8b-instant"];
+            : [
+                "openai/gpt-oss-20b",
+                "openai/gpt-oss-120b",
+                "allam-2-7b",
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant"
+              ];
         const models = {
             default: defaultModel,
             fallbacks,
@@ -129,7 +142,7 @@ export const healthController = async (req: Request, res: Response) => {
                 ping = {
                     ok: false,
                     model: defaultModel,
-                    status: 502,
+                    status: err?.status || 502,
                     reason: sanitized || "AI ping failed",
                 };
             }
@@ -236,7 +249,17 @@ Platform Facts:
         try {
             aiResult = await chatJson(messages);
         } catch (aiErr: any) {
-            const sanitized = String(aiErr?.message || aiErr).slice(0, 100);
+            const status = aiErr?.status;
+            const sanitized = String(aiErr?.message || aiErr).slice(0, 150);
+            if (status === 401) {
+                return res.status(401).json({ message: "Groq API key is invalid or unauthorized", code: "UNAUTHORIZED", detail: sanitized });
+            }
+            if (status === 429) {
+                return res.status(429).json({ message: "Groq rate limit exceeded", code: "RATE_LIMIT", detail: sanitized });
+            }
+            if (status === 404 || status === 400) {
+                return res.status(status).json({ message: "Groq model error or not found", code: "AI_MODEL_ERROR", detail: sanitized });
+            }
             return res.status(502).json({ message: "AI service failed", code: "AI_ERROR", detail: sanitized });
         }
 
@@ -289,7 +312,17 @@ Rules:
         try {
             aiResult = await chatJson(messages);
         } catch (aiErr: any) {
-            const sanitized = String(aiErr?.message || aiErr).slice(0, 100);
+            const status = aiErr?.status;
+            const sanitized = String(aiErr?.message || aiErr).slice(0, 150);
+            if (status === 401) {
+                return res.status(401).json({ message: "Groq API key is invalid or unauthorized", code: "UNAUTHORIZED", detail: sanitized });
+            }
+            if (status === 429) {
+                return res.status(429).json({ message: "Groq rate limit exceeded", code: "RATE_LIMIT", detail: sanitized });
+            }
+            if (status === 404 || status === 400) {
+                return res.status(status).json({ message: "Groq model error or not found", code: "AI_MODEL_ERROR", detail: sanitized });
+            }
             return res.status(502).json({ message: "AI service failed", code: "AI_ERROR", detail: sanitized });
         }
 

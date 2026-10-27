@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const node_1 = require("better-auth/node");
 const auth_1 = require("./lib/auth");
@@ -18,7 +18,6 @@ const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const report_routes_1 = __importDefault(require("./routes/report.routes"));
 const public_routes_1 = __importDefault(require("./routes/public.routes"));
 const ai_routes_1 = __importDefault(require("./routes/ai.routes"));
-dotenv_1.default.config();
 const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const CLIENT_URL = env("CLIENT_URL");
 const app = (0, express_1.default)();
@@ -67,6 +66,9 @@ app.use((err, req, res, next) => {
 async function connectDB() {
     try {
         const uri = process.env.MONGODB_URI;
+        if (!uri) {
+            throw new Error("MONGODB_URI is not set");
+        }
         await mongoose_1.default.connect(uri);
         console.log("MongoDB connected successfully");
     }

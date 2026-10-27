@@ -1,10 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireRole = exports.requireAuth = void 0;
+require("dotenv/config");
 const auth_1 = require("../lib/auth");
 const node_1 = require("better-auth/node");
 const mongodb_1 = require("mongodb");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 const db = client.db();
 const norm = (v) => String(v ?? "").trim().toLowerCase();
 // Check if user is logged in

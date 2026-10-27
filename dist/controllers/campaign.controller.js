@@ -1,11 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminDeleteCampaign = exports.getAllCampaigns = exports.rejectCampaign = exports.approveCampaign = exports.getPendingCampaigns = exports.deleteCampaign = exports.updateCampaign = exports.getMyCampaigns = exports.getCampaignById = exports.getTopFundedCampaigns = exports.getApprovedCampaigns = exports.createCampaign = void 0;
+require("dotenv/config");
 const Campaign_1 = require("../models/Campaign");
 const Contribution_1 = require("../models/Contribution");
 const Notification_1 = require("../models/Notification");
 const mongodb_1 = require("mongodb");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 const db = client.db();
 // Create a new campaign (Creator)
 const createCampaign = async (req, res) => {

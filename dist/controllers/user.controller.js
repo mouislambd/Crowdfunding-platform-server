@@ -34,9 +34,14 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAdminStats = exports.removeUser = exports.updateUserRole = exports.getAllUsers = void 0;
+require("dotenv/config");
 const mongodb_1 = require("mongodb");
 const Payment_1 = require("../models/Payment");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 // Get all users (Admin - Manage Users)
 const getAllUsers = async (req, res) => {
     try {

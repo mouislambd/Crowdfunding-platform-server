@@ -1,11 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.rejectContribution = exports.approveContribution = exports.getPendingContributionsForCreator = exports.getApprovedContributions = exports.getMyContributions = exports.createContribution = void 0;
+require("dotenv/config");
 const Contribution_1 = require("../models/Contribution");
 const Campaign_1 = require("../models/Campaign");
 const Notification_1 = require("../models/Notification");
 const mongodb_1 = require("mongodb");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 const db = client.db();
 // Create a new contribution (Supporter)
 const createContribution = async (req, res) => {

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.draftCampaignController = exports.assistantController = exports.healthController = void 0;
+require("dotenv/config");
 const groq_1 = require("../lib/groq");
 const auth_1 = require("../lib/auth");
 const node_1 = require("better-auth/node");
@@ -81,12 +82,25 @@ Admin Dashboard: /dashboard/admin-home, /dashboard/manage-users, /dashboard/mana
 const creditRulesDesc = "Supporters get 50 credits and builders 20 at signup. 20 credits = $1 for builder withdrawals, minimum 200 credits.";
 const healthController = async (req, res) => {
     try {
-        const configured = Boolean(env("GROQ_API_KEY"));
-        const defaultModel = env("GROQ_MODEL") || "llama-3.3-70b-versatile";
+        let configured = false;
+        try {
+            (0, groq_1.getGroqApiKey)();
+            configured = true;
+        }
+        catch {
+            configured = false;
+        }
+        const defaultModel = env("GROQ_MODEL") || "qwen/qwen3.8-27b";
         const fallbackEnv = env("GROQ_FALLBACK_MODELS");
         const fallbacks = fallbackEnv
             ? fallbackEnv.split(",").map(m => m.trim()).filter(Boolean)
-            : ["llama-3.1-8b-instant"];
+            : [
+                "openai/gpt-oss-20b",
+                "openai/gpt-oss-120b",
+                "allam-2-7b",
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant"
+            ];
         const models = {
             default: defaultModel,
             fallbacks,
@@ -124,7 +138,7 @@ const healthController = async (req, res) => {
                 ping = {
                     ok: false,
                     model: defaultModel,
-                    status: 502,
+                    status: err?.status || 502,
                     reason: sanitized || "AI ping failed",
                 };
             }
@@ -226,7 +240,17 @@ Platform Facts:
             aiResult = await (0, groq_1.chatJson)(messages);
         }
         catch (aiErr) {
-            const sanitized = String(aiErr?.message || aiErr).slice(0, 100);
+            const status = aiErr?.status;
+            const sanitized = String(aiErr?.message || aiErr).slice(0, 150);
+            if (status === 401) {
+                return res.status(401).json({ message: "Groq API key is invalid or unauthorized", code: "UNAUTHORIZED", detail: sanitized });
+            }
+            if (status === 429) {
+                return res.status(429).json({ message: "Groq rate limit exceeded", code: "RATE_LIMIT", detail: sanitized });
+            }
+            if (status === 404 || status === 400) {
+                return res.status(status).json({ message: "Groq model error or not found", code: "AI_MODEL_ERROR", detail: sanitized });
+            }
             return res.status(502).json({ message: "AI service failed", code: "AI_ERROR", detail: sanitized });
         }
         const reply = typeof aiResult?.reply === "string" ? aiResult.reply.trim() : "I'm here to help you with FundRise.";
@@ -275,7 +299,17 @@ Rules:
             aiResult = await (0, groq_1.chatJson)(messages);
         }
         catch (aiErr) {
-            const sanitized = String(aiErr?.message || aiErr).slice(0, 100);
+            const status = aiErr?.status;
+            const sanitized = String(aiErr?.message || aiErr).slice(0, 150);
+            if (status === 401) {
+                return res.status(401).json({ message: "Groq API key is invalid or unauthorized", code: "UNAUTHORIZED", detail: sanitized });
+            }
+            if (status === 429) {
+                return res.status(429).json({ message: "Groq rate limit exceeded", code: "RATE_LIMIT", detail: sanitized });
+            }
+            if (status === 404 || status === 400) {
+                return res.status(status).json({ message: "Groq model error or not found", code: "AI_MODEL_ERROR", detail: sanitized });
+            }
             return res.status(502).json({ message: "AI service failed", code: "AI_ERROR", detail: sanitized });
         }
         if (!aiResult || typeof aiResult !== "object") {

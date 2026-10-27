@@ -1,9 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMyPayments = exports.createPayment = void 0;
+require("dotenv/config");
 const mongodb_1 = require("mongodb");
 const Payment_1 = require("../models/Payment");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 const createPayment = async (req, res) => {
     try {
         const { amount, credits, payment_type, transaction_id } = req.body;

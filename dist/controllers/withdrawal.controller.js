@@ -1,12 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.approveWithdrawal = exports.getPendingWithdrawals = exports.getMyWithdrawals = exports.createWithdrawal = exports.getWithdrawalSummary = void 0;
+require("dotenv/config");
 const Withdrawal_1 = require("../models/Withdrawal");
 const Campaign_1 = require("../models/Campaign");
 const Payment_1 = require("../models/Payment");
 const Notification_1 = require("../models/Notification");
 const mongodb_1 = require("mongodb");
-const client = new mongodb_1.MongoClient(process.env.MONGODB_URI);
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_1.MongoClient(uri);
 const db = client.db();
 // Withdrawal summary (Builder)
 const getWithdrawalSummary = async (req, res) => {

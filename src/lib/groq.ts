@@ -3,17 +3,35 @@ dotenv.config();
 
 const env = (k: string) => (process.env[k] ?? "").trim();
 
-export async function chatJson(messages: Array<{ role: string; content: string }>): Promise<any> {
-    const apiKey = env("GROQ_API_KEY");
-    if (!apiKey) {
-        throw new Error("GROQ_API_KEY is not configured");
+export function getGroqApiKey(): string {
+    const raw = process.env.GROQ_API_KEY;
+    if (!raw || typeof raw !== "string") {
+        throw new Error("GROQ_API_KEY is not set");
     }
+    let trimmed = raw.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+        trimmed = trimmed.slice(1, -1).trim();
+    }
+    if (!trimmed) {
+        throw new Error("GROQ_API_KEY is not set");
+    }
+    return trimmed;
+}
 
-    const defaultModel = env("GROQ_MODEL") || "llama-3.3-70b-versatile";
+export async function chatJson(messages: Array<{ role: string; content: string }>): Promise<any> {
+    const apiKey = getGroqApiKey();
+
+    const defaultModel = env("GROQ_MODEL") || "qwen/qwen3.8-27b";
     const fallbackEnv = env("GROQ_FALLBACK_MODELS");
     const fallbacks = fallbackEnv
         ? fallbackEnv.split(",").map(m => m.trim()).filter(Boolean)
-        : ["llama-3.1-8b-instant"];
+        : [
+            "openai/gpt-oss-20b",
+            "openai/gpt-oss-120b",
+            "allam-2-7b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant"
+          ];
 
     const modelsToTry = [defaultModel, ...fallbacks];
     const uniqueModels = Array.from(new Set(modelsToTry));
@@ -46,6 +64,27 @@ export async function chatJson(messages: Array<{ role: string; content: string }
             if (!response.ok) {
                 const text = await response.text();
                 const status = response.status;
+                let groqErrCode = "UNKNOWN";
+                let groqErrMsg = text;
+                try {
+                    const parsed = JSON.parse(text);
+                    groqErrCode = parsed?.error?.code || "UNKNOWN";
+                    groqErrMsg = parsed?.error?.message || text;
+                } catch (e) {
+                    // not json
+                }
+
+                console.error(`Groq error: model ${model} failed with HTTP status ${status}. Code: ${groqErrCode}, Message: ${groqErrMsg}`);
+
+                const err: any = new Error(`Groq API error (${status}): ${groqErrMsg}`);
+                err.status = status;
+                err.code = groqErrCode;
+                err.groqMessage = groqErrMsg;
+
+                if (status === 401) {
+                    throw err;
+                }
+
                 const lowerText = text.toLowerCase();
                 const isRetryable =
                     status === 400 ||
@@ -56,10 +95,10 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                     lowerText.includes("model_not_found");
 
                 if (isRetryable) {
-                    console.error(`Groq status ${status}: model ${model} failed`);
+                    lastError = err;
                     continue;
                 } else {
-                    throw new Error(`Groq API error (${status}): ${text.slice(0, 100)}`);
+                    throw err;
                 }
             }
 
@@ -73,7 +112,17 @@ export async function chatJson(messages: Array<{ role: string; content: string }
         } catch (err: any) {
             lastError = err;
             const msg = String(err?.message || err).toLowerCase();
+            const status = err?.status;
+
+            if (status === 401) {
+                throw err;
+            }
+
             const isRetryable =
+                status === 400 ||
+                status === 404 ||
+                status === 429 ||
+                (status >= 500 && status < 600) ||
                 msg.includes("abort") ||
                 msg.includes("timeout") ||
                 msg.includes("decommissioned") ||
@@ -81,11 +130,7 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                 msg.includes("400") ||
                 msg.includes("404") ||
                 msg.includes("429") ||
-                msg.includes("5") ||
-                err?.status === 400 ||
-                err?.status === 404 ||
-                err?.status === 429 ||
-                (err?.status >= 500 && err?.status < 600);
+                msg.includes("5");
 
             console.error(`Groq error: model ${model} failed`, err?.message || err);
             if (!isRetryable) {

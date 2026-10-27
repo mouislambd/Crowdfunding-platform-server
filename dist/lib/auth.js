@@ -1,16 +1,16 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.auth = void 0;
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+require("dotenv/config");
 const better_auth_1 = require("better-auth");
 const mongodb_1 = require("better-auth/adapters/mongodb");
 const mongodb_2 = require("mongodb");
 const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
-const client = new mongodb_2.MongoClient(env("MONGODB_URI"));
+const mongoUri = env("MONGODB_URI");
+if (!mongoUri) {
+    throw new Error("MONGODB_URI is not set");
+}
+const client = new mongodb_2.MongoClient(mongoUri);
 const db = client.db();
 const isProduction = process.env.NODE_ENV === "production";
 const BETTER_AUTH_URL = env("BETTER_AUTH_URL");
