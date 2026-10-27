@@ -118,7 +118,16 @@ export async function chatJson(messages: Array<{ role: string; content: string }
                 throw new Error("Empty response content from Groq");
             }
 
-            return JSON.parse(content);
+            let cleanContent = content.trim();
+            if (cleanContent.startsWith("```")) {
+                cleanContent = cleanContent.replace(/^```(json)?\n?/i, "").replace(/\n?```$/, "").trim();
+            }
+
+            try {
+                return JSON.parse(cleanContent);
+            } catch (e) {
+                return { reply: content, action: null };
+            }
         } catch (err: any) {
             lastError = err;
             const msg = String(err?.message || err).toLowerCase();

@@ -32,10 +32,26 @@ export const createCampaign = async (req: Request, res: Response) => {
 // Get all approved campaigns (public - for Supporters, deadline not passed)
 export const getApprovedCampaigns = async (req: Request, res: Response) => {
     try {
-        const campaigns = await Campaign.find({
+        const { category, search } = req.query;
+        const filter: any = {
             status: "approved",
             deadline: { $gte: new Date() },
-        }).sort({ createdAt: -1 });
+        };
+
+        if (category && typeof category === "string") {
+            filter.category = { $regex: new RegExp(`^${category.trim()}$`, "i") };
+        }
+
+        if (search && typeof search === "string") {
+            const searchRegex = new RegExp(search.trim(), "i");
+            filter.$or = [
+                { campaign_title: searchRegex },
+                { campaign_story: searchRegex },
+                { category: searchRegex },
+            ];
+        }
+
+        const campaigns = await Campaign.find(filter).sort({ createdAt: -1 });
 
         res.status(200).json(campaigns);
     } catch (error: any) {
