@@ -28,6 +28,7 @@ function rateLimit(limit, windowMs = 60000) {
     };
 }
 router.get("/health", ai_controller_1.healthController);
-router.post("/assistant", rateLimit(15, 60000), ai_controller_1.assistantController);
+router.get("/status", auth_1.requireAuth, ai_controller_1.statusController);
+router.post("/agent", rateLimit(15, 60000), ai_controller_1.agentController);
 router.post("/draft-campaign", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), rateLimit(5, 60000), ai_controller_1.draftCampaignController);
 exports.default = router;

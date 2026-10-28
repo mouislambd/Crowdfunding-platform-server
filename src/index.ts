@@ -84,8 +84,8 @@ async function connectDB() {
 
 connectDB();
 
-const groqKeyPresent = Boolean(process.env.GROQ_API_KEY?.trim());
-console.log(`Mounted route prefixes: /api/auth, /api/ai, /api/campaigns, /api/contributions, /api/withdrawals, /api/notifications, /api/payments, /api/users, /api/reports, /api/public, /api/subscribers, /api/version | GROQ_API_KEY present: ${groqKeyPresent}`);
+const geminiKeyPresent = Boolean(process.env.GEMINI_API_KEY?.trim());
+console.log(`Mounted route prefixes: /api/auth, /api/ai, /api/campaigns, /api/contributions, /api/withdrawals, /api/notifications, /api/payments, /api/users, /api/reports, /api/public, /api/subscribers, /api/version | GEMINI_API_KEY present: ${geminiKeyPresent}`);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

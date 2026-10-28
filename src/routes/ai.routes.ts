@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
-import { assistantController, draftCampaignController, healthController } from "../controllers/ai.controller";
+import { agentController, draftCampaignController, healthController, statusController } from "../controllers/ai.controller";
 import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router = express.Router();
@@ -31,7 +31,8 @@ function rateLimit(limit: number, windowMs: number = 60000) {
 }
 
 router.get("/health", healthController);
-router.post("/assistant", rateLimit(15, 60000), assistantController);
+router.get("/status", requireAuth, statusController);
+router.post("/agent", rateLimit(15, 60000), agentController);
 router.post("/draft-campaign", requireAuth, requireRole("builder"), rateLimit(5, 60000), draftCampaignController);
 
 export default router;
