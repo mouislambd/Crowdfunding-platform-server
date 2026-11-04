@@ -20,16 +20,15 @@ const public_routes_1 = __importDefault(require("./routes/public.routes"));
 const ai_routes_1 = __importDefault(require("./routes/ai.routes"));
 const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const CLIENT_URL = env("CLIENT_URL");
+const isProduction = process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
 const port = process.env.PORT || 5000;
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        const allowedOrigins = [
-            "http://localhost:3000",
-            "https://crowdfunding-platform-client-flame.vercel.app",
-            CLIENT_URL,
-        ];
+        const allowedOrigins = isProduction
+            ? [CLIENT_URL].filter(Boolean)
+            : ["http://localhost:3000", CLIENT_URL].filter(Boolean);
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         }
@@ -44,9 +43,6 @@ app.all("/api/auth/*splat", (0, node_1.toNodeHandler)(auth_1.auth));
 app.use(express_1.default.json());
 app.get("/", (req, res) => {
     res.send("Crowdfunding Platform Server is running!");
-});
-app.get("/api/version", (req, res) => {
-    res.json({ version: "ai-v2", time: new Date().toISOString() });
 });
 app.use("/api/ai", ai_routes_1.default);
 app.use("/api/campaigns", campaign_routes_1.default);
@@ -70,15 +66,10 @@ async function connectDB() {
             throw new Error("MONGODB_URI is not set");
         }
         await mongoose_1.default.connect(uri);
-        console.log("MongoDB connected successfully");
     }
     catch (error) {
         console.error("MongoDB connection failed:", error);
     }
 }
 connectDB();
-const geminiKeyPresent = Boolean(process.env.GEMINI_API_KEY?.trim());
-console.log(`Mounted route prefixes: /api/auth, /api/ai, /api/campaigns, /api/contributions, /api/withdrawals, /api/notifications, /api/payments, /api/users, /api/reports, /api/public, /api/subscribers, /api/version | GEMINI_API_KEY present: ${geminiKeyPresent}`);
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+app.listen(port);

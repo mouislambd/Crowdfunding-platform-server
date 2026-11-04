@@ -8,6 +8,8 @@ export interface IPayment extends Document {
     payment_type: "credit_purchase" | "withdrawal";
     transaction_id: string;
     status: "success" | "pending" | "failed";
+    stripe_session_id?: string;
+    stripe_payment_intent_id?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -29,6 +31,8 @@ const paymentSchema = new Schema<IPayment>(
             enum: ["success", "pending", "failed"],
             default: "pending",
         },
+        stripe_session_id: { type: String },
+        stripe_payment_intent_id: { type: String },
     },
     { timestamps: true }
 );

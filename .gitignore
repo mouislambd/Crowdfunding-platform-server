@@ -1,3 +1,7 @@
 node_modules
 .env
 dist0
+.adal/
+.aider-desk/
+.agents/
+skills-lock.json

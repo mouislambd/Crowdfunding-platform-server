@@ -22,11 +22,10 @@ export const auth = betterAuth({
     database: mongodbAdapter(db),
     secret: env("BETTER_AUTH_SECRET"),
     baseURL: BETTER_AUTH_URL,
-    trustedOrigins: [
-        "http://localhost:3000",
-        "https://crowdfunding-platform-client-flame.vercel.app",
-        CLIENT_URL,
-    ].filter(Boolean) as string[],
+    trustedOrigins: (isProduction
+        ? [CLIENT_URL, "https://crowdfunding-platform-client-flame.vercel.app"]
+        : ["http://localhost:3000", CLIENT_URL, "https://crowdfunding-platform-client-flame.vercel.app"]
+    ).filter(Boolean) as string[],
     account: {
         accountLinking: {
             enabled: true,
@@ -93,7 +92,6 @@ export const auth = betterAuth({
                         const normalizedRole = typeof user?.role === "string" ? user.role.trim().toLowerCase() : "supporter";
                         const role = normalizedRole === "builder" ? "builder" : "supporter";
                         const credits = role === "supporter" ? 50 : 20;
-                        console.log("signup hook", user?.email, role, credits);
                         return {
                             data: {
                                 ...user,
@@ -116,5 +114,3 @@ export const auth = betterAuth({
         },
     },
 });
-
-console.log("account linking:", JSON.stringify(auth.options.account));

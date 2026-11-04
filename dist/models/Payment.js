@@ -51,5 +51,7 @@ const paymentSchema = new mongoose_1.Schema({
         enum: ["success", "pending", "failed"],
         default: "pending",
     },
+    stripe_session_id: { type: String },
+    stripe_payment_intent_id: { type: String },
 }, { timestamps: true });
 exports.Payment = mongoose_1.default.model("Payment", paymentSchema);

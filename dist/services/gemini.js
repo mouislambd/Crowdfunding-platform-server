@@ -78,7 +78,6 @@ async function syncModels() {
             });
             if (autoPicked.length > 0) {
                 finalModels = autoPicked;
-                console.log(`Auto-picked Gemini flash models: ${finalModels.join(", ")}`);
             }
             else {
                 finalModels = configured;

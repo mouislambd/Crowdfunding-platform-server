@@ -59,7 +59,6 @@ const createWithdrawal = async (req, res) => {
     }
 };
 exports.createWithdrawal = createWithdrawal;
-// ... (rest of the file)
 // Get Creator's payment history (all their withdrawals)
 const getMyWithdrawals = async (req, res) => {
     try {
