@@ -53,4 +53,6 @@ const campaignSchema = new mongoose_1.Schema({
     creator_email: { type: String, required: true },
     creator_name: { type: String, required: true },
 }, { timestamps: true });
+campaignSchema.index({ status: 1, deadline: 1 });
+campaignSchema.index({ category: 1 });
 exports.Campaign = mongoose_1.default.model("Campaign", campaignSchema);

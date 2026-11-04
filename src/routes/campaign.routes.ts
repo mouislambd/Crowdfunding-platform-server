@@ -3,8 +3,12 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 import {
     createCampaign,
     getApprovedCampaigns,
+    exploreCampaigns,
     getTopFundedCampaigns,
     getCampaignById,
+    getCampaignUpdates,
+    createCampaignUpdate,
+    deleteCampaignUpdate,
     getMyCampaigns,
     updateCampaign,
     deleteCampaign,
@@ -17,10 +21,16 @@ import {
 
 const router = express.Router();
 
-// Public routes
+// Public routes (must order /explore and /:id/updates BEFORE /:id)
+router.get("/explore", exploreCampaigns);
 router.get("/approved", getApprovedCampaigns);
 router.get("/top-funded", getTopFundedCampaigns);
+router.get("/:id/updates", getCampaignUpdates);
 router.get("/:id", getCampaignById);
+
+// Builder/Owner routes for updates
+router.post("/:id/updates", requireAuth, requireRole("builder"), createCampaignUpdate);
+router.delete("/:id/updates/:updateId", requireAuth, deleteCampaignUpdate);
 
 // Builder routes
 router.post("/", requireAuth, requireRole("builder"), createCampaign);

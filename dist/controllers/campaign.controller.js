@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminDeleteCampaign = exports.getAllCampaigns = exports.rejectCampaign = exports.approveCampaign = exports.getPendingCampaigns = exports.deleteCampaign = exports.updateCampaign = exports.getMyCampaigns = exports.getCampaignById = exports.getTopFundedCampaigns = exports.getApprovedCampaigns = exports.createCampaign = void 0;
+exports.adminDeleteCampaign = exports.getAllCampaigns = exports.rejectCampaign = exports.approveCampaign = exports.getPendingCampaigns = exports.deleteCampaign = exports.updateCampaign = exports.getMyCampaigns = exports.deleteCampaignUpdate = exports.createCampaignUpdate = exports.getCampaignUpdates = exports.getCampaignById = exports.getTopFundedCampaigns = exports.exploreCampaigns = exports.getApprovedCampaigns = exports.createCampaign = void 0;
 require("dotenv/config");
 const Campaign_1 = require("../models/Campaign");
+const CampaignUpdate_1 = require("../models/CampaignUpdate");
 const Contribution_1 = require("../models/Contribution");
 const Notification_1 = require("../models/Notification");
 const mongodb_1 = require("mongodb");
@@ -12,6 +13,9 @@ if (!uri) {
 }
 const client = new mongodb_1.MongoClient(uri);
 const db = client.db();
+function escapeRegex(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
 // Create a new campaign (Creator)
 const createCampaign = async (req, res) => {
     try {
@@ -38,10 +42,10 @@ const getApprovedCampaigns = async (req, res) => {
             deadline: { $gte: new Date() },
         };
         if (category && typeof category === "string") {
-            filter.category = { $regex: new RegExp(`^${category.trim()}$`, "i") };
+            filter.category = { $regex: new RegExp(`^${escapeRegex(category.trim())}$`, "i") };
         }
         if (search && typeof search === "string") {
-            const searchRegex = new RegExp(search.trim(), "i");
+            const searchRegex = new RegExp(escapeRegex(search.trim()), "i");
             filter.$or = [
                 { campaign_title: searchRegex },
                 { campaign_story: searchRegex },
@@ -56,6 +60,97 @@ const getApprovedCampaigns = async (req, res) => {
     }
 };
 exports.getApprovedCampaigns = getApprovedCampaigns;
+// Advanced explore campaigns
+const exploreCampaigns = async (req, res) => {
+    try {
+        const { search, category, minGoal, maxGoal, status, sort = "newest", page = "1", limit = "9", } = req.query;
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(24, Math.max(1, parseInt(limit, 10) || 9));
+        const skip = (pageNum - 1) * limitNum;
+        const match = { status: "approved" };
+        const now = new Date();
+        if (status === "active") {
+            match.deadline = { $gte: now };
+            match.$expr = { $lt: ["$amount_raised", "$funding_goal"] };
+        }
+        else if (status === "ending-soon") {
+            const fourteenDays = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+            match.deadline = { $gte: now, $lte: fourteenDays };
+        }
+        else if (status === "funded") {
+            match.$expr = { $gte: ["$amount_raised", "$funding_goal"] };
+        }
+        else {
+            match.deadline = { $gte: now };
+        }
+        if (category && typeof category === "string" && category.trim()) {
+            match.category = { $regex: new RegExp(`^${escapeRegex(category.trim())}$`, "i") };
+        }
+        const minG = Number(minGoal);
+        const maxG = Number(maxGoal);
+        if (!isNaN(minG) || !isNaN(maxG)) {
+            match.funding_goal = {};
+            if (!isNaN(minG))
+                match.funding_goal.$gte = minG;
+            if (!isNaN(maxG))
+                match.funding_goal.$lte = maxG;
+        }
+        if (search && typeof search === "string" && search.trim()) {
+            const safeSearch = escapeRegex(search.trim());
+            const searchRegex = new RegExp(safeSearch, "i");
+            match.$or = [
+                { campaign_title: searchRegex },
+                { campaign_story: searchRegex },
+                { category: searchRegex },
+            ];
+        }
+        let sortObj = { createdAt: -1 };
+        if (sort === "most-funded") {
+            sortObj = { amount_raised: -1 };
+        }
+        else if (sort === "ending-soon") {
+            sortObj = { deadline: 1 };
+        }
+        else if (sort === "goal-high") {
+            sortObj = { funding_goal: -1 };
+        }
+        const aggregation = [
+            { $match: match },
+            {
+                $addFields: {
+                    percentFunded: {
+                        $cond: [
+                            { $eq: ["$funding_goal", 0] },
+                            0,
+                            { $multiply: [{ $divide: ["$amount_raised", "$funding_goal"] }, 100] },
+                        ],
+                    },
+                },
+            },
+            { $sort: sortObj },
+            {
+                $facet: {
+                    items: [{ $skip: skip }, { $limit: limitNum }],
+                    total: [{ $count: "count" }],
+                },
+            },
+        ];
+        const result = await Campaign_1.Campaign.aggregate(aggregation);
+        const items = result[0]?.items || [];
+        const total = result[0]?.total?.[0]?.count || 0;
+        const totalPages = Math.ceil(total / limitNum);
+        res.status(200).json({
+            items,
+            total,
+            page: pageNum,
+            totalPages,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+exports.exploreCampaigns = exploreCampaigns;
 // Get top 6 funded campaigns (homepage)
 const getTopFundedCampaigns = async (req, res) => {
     try {
@@ -83,6 +178,81 @@ const getCampaignById = async (req, res) => {
     }
 };
 exports.getCampaignById = getCampaignById;
+// Campaign Updates controllers
+const getCampaignUpdates = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const campaign = await Campaign_1.Campaign.findById(id);
+        if (!campaign || campaign.status !== "approved") {
+            return res.status(404).json({ message: "Campaign not found" });
+        }
+        const updates = await CampaignUpdate_1.CampaignUpdate.find({ campaign_id: campaign._id }).sort({ createdAt: -1 });
+        res.status(200).json(updates);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+exports.getCampaignUpdates = getCampaignUpdates;
+const createCampaignUpdate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, body } = req.body;
+        if (!title || typeof title !== "string" || title.length > 120) {
+            return res.status(400).json({ message: "Title is required and must be at most 120 characters" });
+        }
+        if (!body || typeof body !== "string" || body.length > 2000) {
+            return res.status(400).json({ message: "Body is required and must be at most 2000 characters" });
+        }
+        const campaign = await Campaign_1.Campaign.findOne({ _id: id, creator_email: req.user.email });
+        if (!campaign) {
+            return res.status(404).json({ message: "Campaign not found or unauthorized" });
+        }
+        const update = await CampaignUpdate_1.CampaignUpdate.create({
+            campaign_id: campaign._id,
+            creator_email: req.user.email,
+            creator_name: req.user.name,
+            title: title.trim(),
+            body: body.trim(),
+        });
+        const contributions = await Contribution_1.Contribution.find({ campaign_id: campaign._id, status: "approved" });
+        const distinctEmails = Array.from(new Set(contributions.map(c => c.supporter_email)));
+        for (const email of distinctEmails) {
+            await Notification_1.Notification.create({
+                message: `New update on campaign "${campaign.campaign_title}": ${title.trim()}`,
+                toEmail: email,
+                actionRoute: `/campaigns/${campaign._id}`,
+                time: new Date(),
+            });
+        }
+        res.status(201).json(update);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+exports.createCampaignUpdate = createCampaignUpdate;
+const deleteCampaignUpdate = async (req, res) => {
+    try {
+        const { id, updateId } = req.params;
+        const update = await CampaignUpdate_1.CampaignUpdate.findOne({ _id: updateId, campaign_id: id });
+        if (!update) {
+            return res.status(404).json({ message: "Update not found" });
+        }
+        const campaign = await Campaign_1.Campaign.findById(id);
+        const isAdmin = req.user.role === "admin";
+        const isOwner = campaign && campaign.creator_email === req.user.email;
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+        await CampaignUpdate_1.CampaignUpdate.findByIdAndDelete(updateId);
+        res.status(200).json({ message: "Update deleted successfully" });
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+exports.deleteCampaignUpdate = deleteCampaignUpdate;
 // Get campaigns created by logged-in Creator (My Campaigns)
 const getMyCampaigns = async (req, res) => {
     try {

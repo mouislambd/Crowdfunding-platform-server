@@ -31,7 +31,7 @@ const paymentSchema = new Schema<IPayment>(
             enum: ["success", "pending", "failed"],
             default: "pending",
         },
-        stripe_session_id: { type: String },
+        stripe_session_id: { type: String, unique: true, sparse: true },
         stripe_payment_intent_id: { type: String },
     },
     { timestamps: true }

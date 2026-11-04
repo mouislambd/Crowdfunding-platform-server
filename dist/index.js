@@ -18,6 +18,7 @@ const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const report_routes_1 = __importDefault(require("./routes/report.routes"));
 const public_routes_1 = __importDefault(require("./routes/public.routes"));
 const ai_routes_1 = __importDefault(require("./routes/ai.routes"));
+const payment_controller_1 = require("./controllers/payment.controller");
 const env = (k) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const CLIENT_URL = env("CLIENT_URL");
 const isProduction = process.env.NODE_ENV === "production";
@@ -40,9 +41,14 @@ app.use((0, cors_1.default)({
 }));
 // Better Auth handler MUST be mounted before express.json()
 app.all("/api/auth/*splat", (0, node_1.toNodeHandler)(auth_1.auth));
+// Stripe webhook MUST be registered before express.json()
+app.post("/api/payments/webhook", express_1.default.raw({ type: "application/json" }), payment_controller_1.handleStripeWebhook);
 app.use(express_1.default.json());
 app.get("/", (req, res) => {
     res.send("Crowdfunding Platform Server is running!");
+});
+app.get("/api/version", (req, res) => {
+    res.json({ version: "v4", time: new Date().toISOString() });
 });
 app.use("/api/ai", ai_routes_1.default);
 app.use("/api/campaigns", campaign_routes_1.default);

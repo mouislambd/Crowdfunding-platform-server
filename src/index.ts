@@ -13,6 +13,7 @@ import userRoutes from "./routes/user.routes";
 import reportRoutes from "./routes/report.routes";
 import publicRoutes from "./routes/public.routes";
 import aiRoutes from "./routes/ai.routes";
+import { handleStripeWebhook } from "./controllers/payment.controller";
 
 const env = (k: string) => (process.env[k] ?? "").trim().replace(/\/+$/, "");
 const CLIENT_URL = env("CLIENT_URL");
@@ -41,10 +42,17 @@ app.use(
 // Better Auth handler MUST be mounted before express.json()
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
+// Stripe webhook MUST be registered before express.json()
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("Crowdfunding Platform Server is running!");
+});
+
+app.get("/api/version", (req, res) => {
+    res.json({ version: "v4", time: new Date().toISOString() });
 });
 
 app.use("/api/ai", aiRoutes);

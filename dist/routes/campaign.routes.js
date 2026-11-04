@@ -7,10 +7,15 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middlewares/auth");
 const campaign_controller_1 = require("../controllers/campaign.controller");
 const router = express_1.default.Router();
-// Public routes
+// Public routes (must order /explore and /:id/updates BEFORE /:id)
+router.get("/explore", campaign_controller_1.exploreCampaigns);
 router.get("/approved", campaign_controller_1.getApprovedCampaigns);
 router.get("/top-funded", campaign_controller_1.getTopFundedCampaigns);
+router.get("/:id/updates", campaign_controller_1.getCampaignUpdates);
 router.get("/:id", campaign_controller_1.getCampaignById);
+// Builder/Owner routes for updates
+router.post("/:id/updates", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), campaign_controller_1.createCampaignUpdate);
+router.delete("/:id/updates/:updateId", auth_1.requireAuth, campaign_controller_1.deleteCampaignUpdate);
 // Builder routes
 router.post("/", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), campaign_controller_1.createCampaign);
 router.get("/builder/my-campaigns", auth_1.requireAuth, (0, auth_1.requireRole)("builder"), campaign_controller_1.getMyCampaigns);
